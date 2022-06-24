@@ -14,7 +14,7 @@ export default function Tetris() {
     'коричневый',
     'розовый',
     'космический',
-    'testword'
+    'восемьбукв'
   ]
 
   const numberOfRow = 24 //число строк поля тетриса
@@ -94,7 +94,7 @@ export default function Tetris() {
 
     //проверяем совпадение ячеек
     wordLines.forEach((lineDef, index1) => {
-      //lineDef - объект-слово измененного массива условно-случайных слов
+      //lineDef - объект-слово измененного массива условно-случайных слов, разбиваемое
 
 
       //где-то здесь ошибка...
@@ -102,15 +102,15 @@ export default function Tetris() {
       const breakers = []
       //массив, хранящий на каждую итерацию объекты мест пересечения слов {index: индекс слова в массиве объектов-слов, которое в пересекло слово текущей итерации, spot: место-индекс элемента пересечения из массива coords текущей итерации}
       wordLines.forEach((lineAtacker, index2) => {
-      //lineAtacker - объект-слово измененного массива условно-случайных слов
+      //lineAtacker - объект-слово измененного массива условно-случайных слов, разбивающее
         if ((index1 !== index2) && (index1 < index2)) {
-          //слово не должно сравниваться с самим собой и при этом индекс каждого следующего слова должен быть больше (сразу итерации над первым словом со всеми последующими, затем со вторым исключая проверку первого, третьим - первого и второго...) 
+          //индексы должны быть разными и при этом индекс каждого следующего слова должен быть больше (сразу итерации над первым словом со всеми последующими, затем со вторым исключая проверку первого, третьим - первого и второго...) 
           let breakupSpot = null
 
-          lineAtacker.coords.forEach((coordA) => {
-            lineDef.coords.forEach((coordD, spot) => {
+          lineDef.coords.forEach((coordA, spot) => {
+            lineAtacker.coords.forEach((coordD) => {
               //перебериаем массивы с координатами внутри объекта-слова
-              if (coordD[0] === coordA[0] && coordD[1] === coordA[1]) {
+              if ((coordD[0] === coordA[0]) && (coordD[1] === coordA[1])) {
                 breakupSpot = spot
                 //console.log(breakupSpot)
                 //если при переборе массивов будут найдены совпадающие х и у координаты, то они будут записаны в переменную
@@ -119,7 +119,7 @@ export default function Tetris() {
           })
 
           //кто и где ломает
-          if (breakupSpot) {
+          if (breakupSpot !== null) {
             breakers.push({
               index: lineAtacker.index,
               spot: breakupSpot
@@ -129,16 +129,13 @@ export default function Tetris() {
 
         }
       })
-
+      console.log(breakers);
       lineDef.breakers = breakers
       //присвоение массива объектов точек пересечения в объект-слово
 
     })
     //каждая итерация цикла приурочена к объекту-слову по очереди, каждая итерация получает массив с точками пересечения и отправляет их в объект слово
 
-
-
-    //ошибка точно здесь или ниже!!!!!
     //разлом слова
     wordLines.forEach((line, ind) => {
       if (line.breakers.length > 0) {
@@ -169,12 +166,12 @@ export default function Tetris() {
         let x = coords[0]
         let y = coords[1]
 
-        // console.log(x, y, line.letters[i])
+        //console.log(x, y, line.letters[i])
 
         //присвоение каждой букве значения и индекса
-        //???????????????????????????????????????????????? что здесь?
         data[y][x].val = letter
         data[y][x].ind = line.index
+        //console.log(data[y][x].val)
       })
       //для каждой буквы
     })
