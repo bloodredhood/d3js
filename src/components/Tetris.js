@@ -1,23 +1,59 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import "./LineChart.scss"
+import {words} from './words';
 
 
 export default function Tetris() {
   const svgRef = useRef()
-  const someWords = [
-    "разнообразный",
-    "оранжевый",
-    'фиолетовый',
-    'салатовый',
-    'желтоватый',
-    'коричневый',
-    'розовый',
-    'космический',
-    'восемьбукв'
-  ]
+  // const someWord = [
+  //   "correspondent",
+  //   "scientific",
+  //   "agricultural",
+  //   "administration",
+  //   "professional",
+  //   "intelligence",
+  //   "reasonable",
+  //   "participation",
+  //   "opportunity",
+  //   "identification",
+  // ]
 
-  const numberOfRow = 24 //число строк поля тетриса
+
+  //console.log(allOfWords)
+  const neededWords = []
+  words.forEach(word => {
+    if (word.length >= 7 && word.length <= 13) {
+      neededWords.push(word)
+    }
+  })
+  console.log(neededWords)
+
+  
+
+  
+  const randomWords = (arr) => {
+    const result = []
+    const getRandomNum = (max) => {
+      return Math.floor(Math.random() * (max - 1) + 1)
+    }
+    const arrForClip = [...arr]
+    const shortestWord = arr.reduce((a, b) => (a.length <= b.length ? a : b))
+    for (let i = 0; i < arr.length; i++) {
+      if (result.length < shortestWord.length + 1) {
+        const word = arrForClip[getRandomNum(arrForClip.length)]
+        result.push(word)
+        arrForClip.splice(arrForClip.indexOf(word), 1) 
+      }
+    }
+    return result
+  }
+
+  const someWords = randomWords(neededWords)
+  //console.log(someWords)
+
+  const numberOfRow = 24
+  //Math.round(someWords.length / 2 ) * 6 //число строк поля тетриса, ДЛЯ ИЗБЕЖАНИЯ ОШИБОК ДОЛЖНО БЫТЬ ЧЕТНЫМ!!!!
   const data4canvas = new Array(numberOfRow).fill(new Array(numberOfRow).fill(null)).map((row, indY) => {
     //массив-матрица с массивами(строки) и наполнением строк (ячейки-объекты) в которых row - индекс массива, indY - индекс объекта-ячейки
     return row.map((el, indX) => ({ x: indX, y: indY })) //матрица с координатами
@@ -28,10 +64,11 @@ export default function Tetris() {
     const svgWidth = parseInt(svgRef.current.clientWidth)
     const svgHeight = parseInt(svgRef.current.clientHeight)
 
+    console.log(someWords)
     inputWordsInData(someWords, data4canvas) //Вставляет слова data4canvas
     //баг ищем здесь. принимаем массив условно-случайных слов и массив-матрицу
     drawTetris(svgWidth, svgHeight, data4canvas) //Рисует canvas на основе data4canvas и размерах canvas
-  }, [])
+  })
 
   function inputWordsInData(words, data) {
     //принимаем данные из массива someWords и матрицы для заполнения data4canvas, где words - массив условно-случайных слов, data - массив-матрица
@@ -54,14 +91,15 @@ export default function Tetris() {
       })
     })
 
-    //console.log(wordLines)
+    console.log(wordLines)
 
     function setCoords(line) {
       //принимается слово-объект
+      //!!!!! ВАЖНО !!!!! Строки 99-123 нужно переработать для вариативности игры
       if (line.horisontal) {//если слово распологается горизонтально
-
-        line.startCoord.x = Math.floor((numberOfRow - line.letters.length) / 2)
-        line.startCoord.y = Math.floor(numberOfRow / 2) + line.index - 4 // стоит пересмотреть фиксированное значение
+        
+        line.startCoord.x = Math.floor((numberOfRow / 2 - Math.ceil(line.letters.length / 2)))
+        line.startCoord.y = Math.floor(numberOfRow / 2) + (line.index - (Math.ceil(someWords.length / 2))) // стоит пересмотреть фиксированное значение (UPD: после изменения все стало ок)
         //задаем стартовую координату по х и у
         line.coords = line.letters.map((item, index) => {
           return [line.startCoord.x + index, line.startCoord.y]
@@ -72,8 +110,8 @@ export default function Tetris() {
         // console.log(data)
       }
       else {//если слово распологается вертикально
-        line.startCoord.x = Math.floor(numberOfRow / 2) + line.index - 4 // стоит пересмотреть фиксированное значение
-        line.startCoord.y = Math.floor((numberOfRow - line.letters.length) / 2)
+        line.startCoord.x = Math.floor(numberOfRow / 2) + (line.index - (Math.ceil(someWords.length / 2))) // стоит пересмотреть фиксированное значение
+        line.startCoord.y = Math.floor((numberOfRow / 2 - Math.ceil(line.letters.length / 2)))
         //задаем стартовую координату по х и у
         line.coords = line.letters.map((item, index) => {
           return [line.startCoord.x, line.startCoord.y + index]
@@ -98,13 +136,14 @@ export default function Tetris() {
 
 
       //где-то здесь ошибка...
+      //102-129 (причина оши)
 
       const breakers = []
       //массив, хранящий на каждую итерацию объекты мест пересечения слов {index: индекс слова в массиве объектов-слов, которое в пересекло слово текущей итерации, spot: место-индекс элемента пересечения из массива coords текущей итерации}
       wordLines.forEach((lineAtacker, index2) => {
       //lineAtacker - объект-слово измененного массива условно-случайных слов, разбивающее
         if ((index1 !== index2) && (index1 < index2)) {
-          //индексы должны быть разными и при этом индекс каждого следующего слова должен быть больше (сразу итерации над первым словом со всеми последующими, затем со вторым исключая проверку первого, третьим - первого и второго...) 
+          //индексы должны быть разными и при этом индекс каждого следующего слова должен быть больше (сразу итерации над первым словом со всеми последующими третьим) 
           let breakupSpot = null
 
           lineDef.coords.forEach((coordA, spot) => {
@@ -112,7 +151,7 @@ export default function Tetris() {
               //перебериаем массивы с координатами внутри объекта-слова
               if ((coordD[0] === coordA[0]) && (coordD[1] === coordA[1])) {
                 breakupSpot = spot
-                //console.log(breakupSpot)
+                //console.log(spot)
                 //если при переборе массивов будут найдены совпадающие х и у координаты, то они будут записаны в переменную
               }
             })
@@ -129,7 +168,7 @@ export default function Tetris() {
 
         }
       })
-      console.log(breakers);
+      //console.log(breakers);
       lineDef.breakers = breakers
       //присвоение массива объектов точек пересечения в объект-слово
 
@@ -175,7 +214,7 @@ export default function Tetris() {
       })
       //для каждой буквы
     })
-    console.log(wordLines)
+    //console.log(wordLines)
   }
   
   //рисует svg
@@ -191,7 +230,8 @@ export default function Tetris() {
           .attr('class', 'rect')
 
 
-        let rect = boxLetter.append('rect')
+        //let rect = 
+        boxLetter.append('rect')
           .attr('width', size)
           .attr('height', size)
           .attr('x', box.x * size)
@@ -201,7 +241,8 @@ export default function Tetris() {
           .attr('class', `rect-${box.ind}`)
 
 
-        let letter = boxLetter.append('text')
+        //let letter = 
+        boxLetter.append('text')
           .text(box.val)
           .attr('x', box.x * size + size / 2)
           .attr('y', box.y * size + size / 1.5)
