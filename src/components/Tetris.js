@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import "./LineChart.scss"
-import {words} from './words';
+import { words } from './words';
 
 
 export default function Tetris() {
@@ -23,15 +23,16 @@ export default function Tetris() {
   //console.log(allOfWords)
   const neededWords = []
   words.forEach(word => {
-    if (word.length >= 7 && word.length <= 13) {
+    // !!!!! ВАЖНО !!!!! разница в длине не должна превышать 4 символов, минимальная длина не больше 11 символов - дальше ячейки становятся очень маленькими для букв и добавлять цвета новые (11-15(только одно слово такой длины) - 10 слов)(10-14 - 9 слов)(9-13 - 8 слов) и т.д. на уменьшение. Не вижу смысла в случае такой схемы менять количество слов, следует придумать новые схемы расположения слов в матрице
+    if (word.length >= 10 && word.length <= 14) {
       neededWords.push(word)
     }
   })
-  console.log(neededWords)
+  //console.log(neededWords)
 
-  
 
-  
+
+
   const randomWords = (arr) => {
     const result = []
     const getRandomNum = (max) => {
@@ -40,10 +41,10 @@ export default function Tetris() {
     const arrForClip = [...arr]
     const shortestWord = arr.reduce((a, b) => (a.length <= b.length ? a : b))
     for (let i = 0; i < arr.length; i++) {
-      if (result.length < shortestWord.length + 1) {
+      if (result.length < shortestWord.length - 1) {
         const word = arrForClip[getRandomNum(arrForClip.length)]
         result.push(word)
-        arrForClip.splice(arrForClip.indexOf(word), 1) 
+        arrForClip.splice(arrForClip.indexOf(word), 1)
       }
     }
     return result
@@ -52,8 +53,7 @@ export default function Tetris() {
   const someWords = randomWords(neededWords)
   //console.log(someWords)
 
-  const numberOfRow = 24
-  //Math.round(someWords.length / 2 ) * 6 //число строк поля тетриса, ДЛЯ ИЗБЕЖАНИЯ ОШИБОК ДОЛЖНО БЫТЬ ЧЕТНЫМ!!!!
+  const numberOfRow = Math.round(someWords.length / 2) * 6 //число строк поля тетриса, ДЛЯ ИЗБЕЖАНИЯ ОШИБОК ДОЛЖНО БЫТЬ ЧЕТНЫМ!!!!
   const data4canvas = new Array(numberOfRow).fill(new Array(numberOfRow).fill(null)).map((row, indY) => {
     //массив-матрица с массивами(строки) и наполнением строк (ячейки-объекты) в которых row - индекс массива, indY - индекс объекта-ячейки
     return row.map((el, indX) => ({ x: indX, y: indY })) //матрица с координатами
@@ -86,20 +86,22 @@ export default function Tetris() {
         //положение слова во входном условно-случнайном массиве
         coords: [],
         //массив координат слова по матрице - горизонталь и вертикаль
-        breakers: false
-        //сюда прилетает массив с объектами точек пересечения 
+        breakers: false,
+        //сюда прилетает массив с объектами точек пересечения
+        breakersNum: 0
       })
     })
 
-    console.log(wordLines)
+
 
     function setCoords(line) {
-      //принимается слово-объект
-      //!!!!! ВАЖНО !!!!! Строки 99-123 нужно переработать для вариативности игры
+      //принимается слово-объект из someWords
+      //!!!!! ВАЖНО !!!!! Строки 104-109 и 116-119 нужно переработать для вариативности игры
       if (line.horisontal) {//если слово распологается горизонтально
-        
-        line.startCoord.x = Math.floor((numberOfRow / 2 - Math.ceil(line.letters.length / 2)))
-        line.startCoord.y = Math.floor(numberOfRow / 2) + (line.index - (Math.ceil(someWords.length / 2))) // стоит пересмотреть фиксированное значение (UPD: после изменения все стало ок)
+
+        line.startCoord.x = Math.floor((numberOfRow / 2 - Math.ceil(line.letters.length / 2))) + 1
+        //сверху отступ размером в половину слова
+        line.startCoord.y = Math.floor(numberOfRow / 2) + (line.index - (Math.ceil(someWords.length / 2)))
         //задаем стартовую координату по х и у
         line.coords = line.letters.map((item, index) => {
           return [line.startCoord.x + index, line.startCoord.y]
@@ -126,81 +128,97 @@ export default function Tetris() {
     //line - объект-слово из измененного массива условно-случайных слов
     //исполняя функцию задаем координаты каждому объекту-букве для позиционирования в массиве-матрице
 
+    wordLines.forEach((line, idx) => {
+      if (wordLines.length % 2 === 0) {
+        line.breakersNum = Math.floor((wordLines.length - idx) / 2)
+      } else if (wordLines.length % 2 !== 0) {
+        line.breakersNum = Math.floor((wordLines.length - idx) / 2)
+      }
+    })
 
-
-
+    //console.log(wordLines)
 
     //проверяем совпадение ячеек
-    wordLines.forEach((lineDef, index1) => {
-      //lineDef - объект-слово измененного массива условно-случайных слов, разбиваемое
+    //нужно менять код 135-198 и полностью переписать логику, чтобы изображение было красивым, выше просто посчитать количество брейкеров
 
+    //const lettersArr = line.letters;
+    //const breakNum = line.breakersNum;
 
-      //где-то здесь ошибка...
-      //102-129 (причина оши)
+    const breakerFunc = (arr, breakersNum) => {
 
-      const breakers = []
-      //массив, хранящий на каждую итерацию объекты мест пересечения слов {index: индекс слова в массиве объектов-слов, которое в пересекло слово текущей итерации, spot: место-индекс элемента пересечения из массива coords текущей итерации}
-      wordLines.forEach((lineAtacker, index2) => {
-      //lineAtacker - объект-слово измененного массива условно-случайных слов, разбивающее
-        if ((index1 !== index2) && (index1 < index2)) {
-          //индексы должны быть разными и при этом индекс каждого следующего слова должен быть больше (сразу итерации над первым словом со всеми последующими третьим) 
-          let breakupSpot = null
+      const spaceStep = [2, 4, 6, 8];
+      let maxBreakerNum = Math.floor(wordLines.length / 2)
+      let placeChanger = maxBreakerNum - breakersNum
 
-          lineDef.coords.forEach((coordA, spot) => {
-            lineAtacker.coords.forEach((coordD) => {
-              //перебериаем массивы с координатами внутри объекта-слова
-              if ((coordD[0] === coordA[0]) && (coordD[1] === coordA[1])) {
-                breakupSpot = spot
-                //console.log(spot)
-                //если при переборе массивов будут найдены совпадающие х и у координаты, то они будут записаны в переменную
-              }
-            })
-          })
+      let firstSpace = (arr, breakNum, placeChan) => {
 
-          //кто и где ломает
-          if (breakupSpot !== null) {
-            breakers.push({
-              index: lineAtacker.index,
-              spot: breakupSpot
-            })
-          }
-          //если в этой итерации есть совпадение, то в массив прилетает объект точки пересечения
-
+        if (breakNum === 0) {
+          return arr;
         }
-      })
-      //console.log(breakers);
-      lineDef.breakers = breakers
-      //присвоение массива объектов точек пересечения в объект-слово
+
+        if (wordLines.length % 2 === 0) {
+          arr.splice(Math.floor((arr.length - (breakNum - 1)) / 2 + placeChan), 0, '')
+        } else if (wordLines.length % 2 !== 0) {
+          arr.splice(Math.ceil((arr.length - (breakNum - 1)) / 2 + placeChan), 0, '')
+        }
+
+      };
+
+      let multiSpaceAdd = (arr, breakNum, step) => {
+        if (breakNum === 0 && breakNum === 1) {
+          return arr;
+        }
+        const spaceAdd = (array, count) => {
+          array.splice(arr.indexOf("") + count, 0, "");
+        };
+        for (let i = 0; i < breakNum; i++) {
+          spaceAdd(arr, step[i]);
+        }
+      };
+
+      firstSpace(arr, breakersNum, placeChanger);
+      multiSpaceAdd(arr, breakersNum, spaceStep);
+      //увеличивем кол-во координат на 1  
+
+      //console.log(arr)
+      return arr
+    };
+
+    wordLines.forEach(line => {
+      //console.log(line.breakersNum)
+
+      let array = breakerFunc(line.letters, line.breakersNum)
+      line.letters = array
 
     })
-    //каждая итерация цикла приурочена к объекту-слову по очереди, каждая итерация получает массив с точками пересечения и отправляет их в объект слово
 
-    //разлом слова
-    wordLines.forEach((line, ind) => {
-      if (line.breakers.length > 0) {
-        line.breakers.forEach((breaker, ind) => {
-          //добавляем разлом в слове
-          line.letters.splice(breaker.spot, 0, '')
-          //увеличивем кол-во координат на 1  
-          let lastCoords = line.coords[line.coords.length - 1]
-          //переменная, хранящая массив координат последней точки слова-объекта
-          if (line.horisontal) { //увеличиваем x на один
+
+
+    wordLines.forEach(line => {
+      if (line.breakersNum > 0) {
+
+        let lastCoords = line.coords[line.coords.length - 1]
+        //console.log(lastCoords)
+        //переменная, хранящая массив координат последней точки слова-объекта
+        const difference = line.letters.length - line.coords.length
+        if (line.horisontal) { //увеличиваем x на один
+          for (let i = difference; i >= 0; i--) {
             line.coords.push([lastCoords[0] + 1, lastCoords[1]])
-          } else {//увеличиваем y на один
+          }
+        } else {//увеличиваем y на один
+          for (let i = difference; i >= 0; i--) {
             line.coords.push([lastCoords[0], lastCoords[1] + 1])
           }
-        })
-      }
-      //если длина массива объектов точек пересечения > 0, для каждой точки-объекта пересечения добавляем разлом(пустую строку) в массив букв letters
-      //и если объект слово горизонтальное в массив координат добавляем массив координат еще одной точки по горизонтали (то же для вертикали)
-    })
+        }
+      }})
 
-    
+    console.log(wordLines)
+
     //вставка в дб
     wordLines.forEach((line, ind) => {
 
       line.letters.forEach((letter, i) => {
-        
+
         let coords = line.coords[i]
         let x = coords[0]
         let y = coords[1]
@@ -216,7 +234,7 @@ export default function Tetris() {
     })
     //console.log(wordLines)
   }
-  
+
   //рисует svg
   function drawTetris(width, height, data4canvas) {
     // console.log(data4canvas)
